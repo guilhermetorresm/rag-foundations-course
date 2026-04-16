@@ -1,0 +1,23 @@
+[project]
+name = "rag-foundations-course"
+version = "0.1.0"
+description = "Curso prático de RAG de 4 horas — pipeline completo com Ollama, ChromaDB, FastAPI e rich CLI"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "chromadb>=1.5.7",
+    "fastapi>=0.135.3",
+    "ollama>=0.6.1",
+    "pypdf>=6.10.2",
+    "questionary>=2.1.1",
+    "rich>=15.0.0",
+    "sentence-transformers>=5.4.1",
+    "uvicorn>=0.44.0",
+]
+
+[project.scripts]
+rag-cli = "src.cli:main"
+rag-api = "src.api:main"
+
+[tool.uv]
+dev-dependencies = []
