@@ -189,22 +189,21 @@ async def ask(request: QuestionRequest) -> QuestionResponse:
     chunks = _retrieval.search(
         query=request.query,
         collection=state["collection"],
-        embed_model=state["embed_model"],
         cfg=cfg,
     )
 
+    # 2. Guard Clause: Contexto vazio (Slide 6)
     if not chunks:
-        raise HTTPException(
-            status_code=404,
-            detail="Nenhum documento relevante encontrado para a pergunta.",
+        return QuestionResponse(
+            answer="Informação não encontrada nos documentos oficiais.",
+            query=request.query,
+            model=ollama_cfg.model,
+            sources=[],
+            chunks_retrieved=0
         )
 
-    # 2. Re-ranking (opcional)
-    if request.use_rerank:
-        chunks = _retrieval.rerank(request.query, chunks)
-
-    # 3. Formatar contexto
-    context = _retrieval.format_context(chunks)
+    # 3. Formatar contexto com Token Budget (Slide 8)
+    context = _generation.format_context_with_budget(chunks)
 
     # 4. Gerar resposta
     try:
@@ -212,14 +211,12 @@ async def ask(request: QuestionRequest) -> QuestionResponse:
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # 5. Montar resposta
+    # 5. Montar resposta com Fontes (Slide 9)
     sources = [
         {
-            "id": chunk.id,
             "source": Path(chunk.source).name,
             "page": chunk.page,
             "score": round(chunk.score, 3),
-            "preview": chunk.text[:150] + "...",
         }
         for chunk in chunks
     ]
@@ -254,7 +251,6 @@ async def ingest_documents(background_tasks: BackgroundTasks) -> IngestResponse:
     total = _indexing.index_chunks(
         chunks=chunks,
         collection=state["collection"],
-        model=state["embed_model"],
     )
 
     return IngestResponse(

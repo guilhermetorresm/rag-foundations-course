@@ -3,19 +3,11 @@
 ====================================================
 Bloco 1 do Pipeline RAG: carrega documentos brutos do disco,
 limpa o texto e divide em chunks sobrepostos para indexação.
-
-Formatos suportados:
-    • PDF  → via pypdf
-    • TXT  → leitura direta
-    • MD   → leitura direta
-
-Conceito-chave ensinado aqui:
-    Chunking com sobreposição (overlap) garante que o contexto
-    não seja perdido nas bordas de cada janela de texto.
 """
 
 import re
 import unicodedata
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,58 +27,48 @@ console = Console()
 class Chunk:
     """
     Representa um fragmento de texto extraído de um documento.
-
-    Attributes:
-        id:        Identificador único no formato "nome_arquivo_idx".
-        text:      Conteúdo textual do chunk.
-        source:    Caminho do arquivo de origem.
-        page:      Número da página (relevante para PDFs).
-        chunk_idx: Índice sequencial do chunk dentro do documento.
     """
     id: str
     text: str
     source: str
     page: int
     chunk_idx: int
+    doc_hash: str = ""  # Para governança e versionamento (Slide 8)
 
 
 # ─────────────────────────────────────────────
-# Limpeza de Texto
+# Limpeza de Texto (Slide 5)
 # ─────────────────────────────────────────────
 
 def clean_text(raw_text: str) -> str:
     """
-    Normaliza e limpa texto bruto extraído de documentos.
-
-    Pipeline de limpeza:
-        1. Normalização Unicode → converte caracteres especiais para forma canônica
-        2. Remove quebras de linha duplas → preserva apenas parágrafos
-        3. Remove espaços excessivos
-        4. Remove caracteres de controle (exceto newline)
-
-    Args:
-        raw_text: Texto bruto extraído do documento.
-
-    Returns:
-        Texto limpo e normalizado.
-
-    Example:
-        >>> clean_text("  Olá\\n\\n\\n  Mundo!  ")
-        'Olá\\n\\nMundo!'
+    Normaliza e limpa texto bruto (Slide 5 do Bloco 2).
     """
-    # 1. Normalização Unicode (converte ligatures, diacríticos, etc.)
+    # 1. Normalização Unicode
     text = unicodedata.normalize("NFKC", raw_text)
 
-    # 2. Substitui múltiplas quebras de linha por no máximo duas
+    # 2. Remove soft-hyphens (\u00ad) - invisíveis mas tóxicos
+    text = text.replace("\u00ad", "")
+
+    # 3. Junta palavras quebradas por hífen no fim da linha
+    text = re.sub(r"(\w)-\s*\n\s*(\w)", r"\1\2", text)
+
+    # 4. Colapsa espaços e tabs excessivos
+    text = re.sub(r"[ \t]+", " ", text)
+    
+    # 5. Normaliza quebras de linha
     text = re.sub(r"\n{3,}", "\n\n", text)
 
-    # 3. Remove espaços e tabs excessivos em cada linha
-    text = "\n".join(line.strip() for line in text.splitlines())
-
-    # 4. Remove caracteres de controle (exceto \n e \t)
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
-
     return text.strip()
+
+
+def compute_hash(file_path: Path) -> str:
+    """Gera um hash SHA-256 do arquivo para controle de versão."""
+    sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(8192):
+            sha256.update(chunk)
+    return sha256.hexdigest()
 
 
 # ─────────────────────────────────────────────
@@ -96,16 +78,6 @@ def clean_text(raw_text: str) -> str:
 def load_pdf(path: Path) -> list[tuple[str, int]]:
     """
     Carrega um PDF e retorna o texto por página.
-
-    Args:
-        path: Caminho para o arquivo PDF.
-
-    Returns:
-        Lista de tuplas (texto_da_página, número_da_página).
-
-    Raises:
-        FileNotFoundError: Se o arquivo não existir.
-        pypdf.errors.PdfReadError: Se o PDF estiver corrompido.
     """
     pages: list[tuple[str, int]] = []
 
@@ -123,12 +95,6 @@ def load_pdf(path: Path) -> list[tuple[str, int]]:
 def load_text(path: Path) -> list[tuple[str, int]]:
     """
     Carrega um arquivo de texto plano (.txt ou .md).
-
-    Args:
-        path: Caminho para o arquivo de texto.
-
-    Returns:
-        Lista com uma única tupla (texto_completo, página=1).
     """
     raw = path.read_text(encoding="utf-8", errors="replace")
     return [(clean_text(raw), 1)]
@@ -136,16 +102,7 @@ def load_text(path: Path) -> list[tuple[str, int]]:
 
 def load_document(path: Path) -> list[tuple[str, int]]:
     """
-    Roteador de carregamento: detecta o tipo do arquivo e chama o leitor correto.
-
-    Args:
-        path: Caminho para o documento.
-
-    Returns:
-        Lista de tuplas (texto, número_da_página).
-
-    Raises:
-        ValueError: Se o formato do arquivo não for suportado.
+    Roteador de carregamento.
     """
     suffix = path.suffix.lower()
 
@@ -156,10 +113,7 @@ def load_document(path: Path) -> list[tuple[str, int]]:
     }
 
     if suffix not in loaders:
-        raise ValueError(
-            f"Formato '{suffix}' não suportado. "
-            f"Formatos aceitos: {list(loaders.keys())}"
-        )
+        raise ValueError(f"Formato '{suffix}' não suportado.")
 
     return loaders[suffix](path)
 
@@ -176,26 +130,7 @@ def split_into_chunks(
     cfg: ChunkingConfig = chunking_cfg,
 ) -> list[Chunk]:
     """
-    Divide um texto em chunks com sobreposição usando janela deslizante.
-
-    Algoritmo:
-        - Avança pelo texto em passos de (chunk_size - chunk_overlap)
-        - Cada chunk tem tamanho máximo de chunk_size caracteres
-        - A sobreposição garante continuidade entre chunks adjacentes
-
-    Args:
-        text:             Texto a ser dividido.
-        source:           Nome/caminho do arquivo de origem.
-        page:             Número da página de origem.
-        doc_chunk_offset: Offset para numerar chunks sequencialmente entre páginas.
-        cfg:              Configurações de chunking (tamanho, overlap, mínimo).
-
-    Returns:
-        Lista de objetos Chunk.
-
-    Example:
-        >>> chunks = split_into_chunks("texto longo...", "doc.pdf", page=1)
-        >>> print(chunks[0].id)  # "doc.pdf_0"
+    Divide um texto em chunks com sobreposição usando janela deslizante (Slide 6).
     """
     chunks: list[Chunk] = []
     step = cfg.chunk_size - cfg.chunk_overlap
@@ -208,7 +143,6 @@ def split_into_chunks(
         end = start + cfg.chunk_size
         chunk_text = text[start:end].strip()
 
-        # Descarta chunks muito pequenos (provavelmente ruído)
         if len(chunk_text) >= cfg.min_chunk_size:
             chunk_id = f"{source_name}_{chunk_idx}"
             chunks.append(
@@ -234,16 +168,6 @@ def split_into_chunks(
 def ingest_directory(directory: Path, cfg: ChunkingConfig = chunking_cfg) -> list[Chunk]:
     """
     Processa todos os documentos de um diretório e retorna todos os chunks.
-
-    Args:
-        directory: Diretório contendo os documentos a processar.
-        cfg:       Configurações de chunking.
-
-    Returns:
-        Lista consolidada de todos os chunks de todos os documentos.
-
-    Raises:
-        FileNotFoundError: Se o diretório não existir.
     """
     if not directory.exists():
         raise FileNotFoundError(f"Diretório não encontrado: {directory}")
@@ -259,6 +183,7 @@ def ingest_directory(directory: Path, cfg: ChunkingConfig = chunking_cfg) -> lis
     for file_path in files:
         console.print(f"[cyan]📄 Processando:[/cyan] {file_path.name}")
         try:
+            doc_hash = compute_hash(file_path)
             pages = load_document(file_path)
             doc_offset = len(all_chunks)
 
@@ -270,11 +195,11 @@ def ingest_directory(directory: Path, cfg: ChunkingConfig = chunking_cfg) -> lis
                     doc_chunk_offset=doc_offset + len(all_chunks),
                     cfg=cfg,
                 )
+                for c in page_chunks:
+                    c.doc_hash = doc_hash
                 all_chunks.extend(page_chunks)
 
-            console.print(
-                f"   [green]✓[/green] {len(all_chunks)} chunks totais até agora"
-            )
+            console.print(f"   [green]✓[/green] {len(all_chunks)} chunks totais até agora")
 
         except Exception as e:
             console.print(f"   [red]✗ Erro ao processar {file_path.name}: {e}[/red]")
@@ -282,14 +207,8 @@ def ingest_directory(directory: Path, cfg: ChunkingConfig = chunking_cfg) -> lis
     return all_chunks
 
 
-# ─────────────────────────────────────────────
-# Execução Standalone (para testar e demonstrar)
-# ─────────────────────────────────────────────
-
 if __name__ == "__main__":
-    from pathlib import Path
     from rich.table import Table
-
     data_dir = Path(__file__).parent.parent / "data"
 
     console.print("\n[bold cyan]═══ BLOCO 1: Ingestão e Chunking ═══[/bold cyan]\n")
@@ -303,7 +222,7 @@ if __name__ == "__main__":
         table.add_column("Tamanho", justify="right")
         table.add_column("Prévia", style="dim")
 
-        for chunk in chunks[:10]:  # mostra os primeiros 10
+        for chunk in chunks[:10]:
             table.add_row(
                 chunk.id,
                 Path(chunk.source).name,
@@ -313,6 +232,3 @@ if __name__ == "__main__":
             )
 
         console.print(table)
-
-        if len(chunks) > 10:
-            console.print(f"[dim]... e mais {len(chunks) - 10} chunks.[/dim]")

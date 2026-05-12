@@ -1,6 +1,6 @@
 # RAG Foundations Course
 
-Repositório do curso prático de RAG (Retrieval-Augmented Generation) de 4 horas para desenvolvedores experientes.
+Repositório do curso prático de RAG (Retrieval-Augmented Generation).
 
 ## 🗂 Estrutura do Projeto
 
@@ -91,6 +91,25 @@ chunk_overlap: int = 64            # Sobreposição entre chunks
 top_k: int = 5                     # Chunks recuperados por query
 similarity_threshold: float = 0.3  # Score mínimo (0.0 a 1.0)
 ```
+
+## 🚀 Demonstrações do Bloco 1
+
+Para acompanhar os exemplos dos slides, utilize os scripts abaixo:
+
+1. **Demonstração de Alucinação vs RAG**:
+   Veja na prática o LLM inventando informações vs o RAG sendo honesto.
+   ```bash
+   uv run python src/demo_hallucination.py
+   ```
+
+2. **Teste de Embeddings Locais (Ollama)**:
+   Verifique se o seu stack do Ollama está configurado corretamente.
+   ```bash
+   uv run python src/embeddings.py
+   ```
+
+3. **Pipeline Completo (Modo Didático)**:
+   Siga a sequência 1 a 4 nos arquivos `src/`.
 
 ## 📖 Executar Cada Bloco Individualmente
 
