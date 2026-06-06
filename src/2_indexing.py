@@ -111,8 +111,8 @@ def index_chunks(
                         "page": c.page,
                         "chunk_idx": c.chunk_idx,
                         "doc_hash": c.doc_hash,
-                        "status": "vigente",  # Padrão para Slide 16
-                        "version": "v1.0"      # Controle de versão (Slide 8)
+                        "status": "vigente",
+                        "version": "v1.0"
                     }
                     for c in batch
                 ],

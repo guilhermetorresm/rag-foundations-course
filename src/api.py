@@ -65,7 +65,6 @@ def get_state() -> dict[str, Any]:
     if not _state:
         _state["client"] = _indexing.get_chroma_client()
         _state["collection"] = _indexing.get_or_create_collection(_state["client"])
-        _state["embed_model"] = _indexing.load_embedding_model()
     return _state
 
 
@@ -192,7 +191,7 @@ async def ask(request: QuestionRequest) -> QuestionResponse:
         cfg=cfg,
     )
 
-    # 2. Guard Clause: Contexto vazio (Slide 6)
+    # 2. Guard Clause: Contexto vazio
     if not chunks:
         return QuestionResponse(
             answer="Informação não encontrada nos documentos oficiais.",
@@ -202,7 +201,7 @@ async def ask(request: QuestionRequest) -> QuestionResponse:
             chunks_retrieved=0
         )
 
-    # 3. Formatar contexto com Token Budget (Slide 8)
+    # 3. Formatar contexto com Token Budget
     context = _generation.format_context_with_budget(chunks)
 
     # 4. Gerar resposta
@@ -211,7 +210,7 @@ async def ask(request: QuestionRequest) -> QuestionResponse:
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # 5. Montar resposta com Fontes (Slide 9)
+    # 5. Montar resposta com Fontes
     sources = [
         {
             "source": Path(chunk.source).name,

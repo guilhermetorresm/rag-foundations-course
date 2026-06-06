@@ -70,7 +70,7 @@ QUESTIONARY_STYLE = QStyle([
 # ─────────────────────────────────────────────
 
 BANNER = """
-██████╗  █████╗  ██████╗     ██████╗ ██████╗ ██╗   ██╗██████╗ ███████╗███████╗
+██████╗  █████╗  ██████╗     ██████╗ ██████╗  ██╗   ██╗██████╗ ███████╗███████╗
 ██╔══██╗██╔══██╗██╔════╝     ██╔════╝██╔═══██╗██║   ██║██╔══██╗██╔════╝██╔════╝
 ██████╔╝███████║██║  ███╗    ██║     ██║   ██║██║   ██║██████╔╝███████╗█████╗  
 ██╔══██╗██╔══██║██║   ██║    ██║     ██║   ██║██║   ██║██╔══██╗╚════██║██╔══╝  
@@ -112,7 +112,6 @@ def get_app_state() -> dict:
             _app_state["collection"] = _indexing.get_or_create_collection(
                 _app_state["client"]
             )
-            _app_state["embed_model"] = _indexing.load_embedding_model()
     return _app_state
 
 
@@ -187,7 +186,6 @@ def action_ingest() -> None:
     total = _indexing.index_chunks(
         chunks=chunks,
         collection=state["collection"],
-        model=state["embed_model"],
     )
 
     # Resumo final
@@ -270,7 +268,6 @@ def action_ask() -> None:
             chunks = _retrieval.search(
                 query=query,
                 collection=state["collection"],
-                embed_model=state["embed_model"],
             )
 
         if not chunks:

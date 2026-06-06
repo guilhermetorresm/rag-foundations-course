@@ -2,7 +2,7 @@
 embeddings.py — Utilitário de Embeddings via Ollama
 ==================================================
 Centraliza a geração de vetores usando a API do Ollama.
-Conforme Slide 14: "Embeddings são gerados localmente".
+Embeddings são gerados localmente.
 """
 
 import ollama

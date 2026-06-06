@@ -1,7 +1,7 @@
 """
 demo_hallucination.py — Demonstração do Problema e Solução (Bloco 1)
 ===================================================================
-Este script replica o exemplo das páginas 2 e 8 dos slides:
+Este script replica o exemplo prático:
 O caso da "Resolução nº 12/2025" que não existe.
 
 Demonstra:

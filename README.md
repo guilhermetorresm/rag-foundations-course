@@ -8,11 +8,7 @@ Repositório do curso prático de RAG (Retrieval-Augmented Generation).
 rag-foundations-course/
 ├── pyproject.toml              # Gerenciado pelo uv
 ├── .venv/                      # Ambiente virtual (gerenciado pelo uv)
-├── roteiros/
-│   ├── roteiro_bloco_1.md      # Script do Bloco 1: Setup + Arquitetura
-│   └── roteiro_pratica.md      # Script da prática hands-on (Blocos 2-5)
 ├── slides/                     # Slides do curso (adicione aqui)
-├── assets/                     # Imagens e recursos visuais
 ├── data/                       # Documentos para ingestão (PDFs, TXTs)
 │   └── regimento_interno.txt   # Exemplo: política interna fictícia
 └── src/
@@ -29,7 +25,7 @@ rag-foundations-course/
 
 - **Python** 3.14+
 - **uv** (gerenciador de pacotes) — [instalar](https://docs.astral.sh/uv/)
-- **Ollama** — [instalar](https://ollama.ai)
+- **Ollama** — [instalar](https://ollama.ai) ou [curl](curl -fsSL https://ollama.com/install.sh | sh)
 
 ## 🚀 Início Rápido
 

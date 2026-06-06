@@ -33,16 +33,16 @@ class Chunk:
     source: str
     page: int
     chunk_idx: int
-    doc_hash: str = ""  # Para governança e versionamento (Slide 8)
+    doc_hash: str = ""  # Para governança e versionamento
 
 
 # ─────────────────────────────────────────────
-# Limpeza de Texto (Slide 5)
+# Limpeza de Texto
 # ─────────────────────────────────────────────
 
 def clean_text(raw_text: str) -> str:
     """
-    Normaliza e limpa texto bruto (Slide 5 do Bloco 2).
+    Normaliza e limpa texto bruto
     """
     # 1. Normalização Unicode
     text = unicodedata.normalize("NFKC", raw_text)
@@ -130,15 +130,14 @@ def split_into_chunks(
     cfg: ChunkingConfig = chunking_cfg,
 ) -> list[Chunk]:
     """
-    Divide um texto em chunks com sobreposição usando janela deslizante (Slide 6).
+    Divide um texto em chunks com sobreposição usando janela deslizante.
     """
     chunks: list[Chunk] = []
     step = cfg.chunk_size - cfg.chunk_overlap
     source_name = Path(source).name
-
     start = 0
     chunk_idx = doc_chunk_offset
-
+    
     while start < len(text):
         end = start + cfg.chunk_size
         chunk_text = text[start:end].strip()
@@ -155,9 +154,7 @@ def split_into_chunks(
                 )
             )
             chunk_idx += 1
-
         start += step
-
     return chunks
 
 

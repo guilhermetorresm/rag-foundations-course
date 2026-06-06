@@ -50,7 +50,7 @@ from sentence_transformers import CrossEncoder
 def search(
     query: str,
     collection: chromadb.Collection,
-    where: dict | None = None,  # Adicionado filtro de metadata (Slide 16)
+    where: dict | None = None,  # Adicionado filtro de metadata
     cfg: RetrievalConfig = retrieval_cfg,
 ) -> list[RetrievedChunk]:
     """
@@ -69,7 +69,7 @@ def search(
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=n_results,
-        where=where,  # Filtro cirúrgico (Slide 16)
+        where=where,
         include=["documents", "metadatas", "distances"],
     )
 
@@ -89,7 +89,7 @@ def search(
             )
         )
 
-    # 4. Re-ranking (Opcional - Slide 18/19)
+    # 4. Re-ranking (Opcional)
     if cfg.rerank and chunks:
         console.print("[dim]🔄 Aplicando Re-ranking (Cross-Encoder)...[/dim]")
         encoder = CrossEncoder(cfg.rerank_model)

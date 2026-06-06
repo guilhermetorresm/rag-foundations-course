@@ -35,7 +35,7 @@ class RAGResponse:
 
 def build_rag_prompt(query: str, context: str) -> list[dict[str, str]]:
     """
-    Constrói o prompt RAG conforme o 'Contrato' (Slide 4 e 5 do Bloco 3).
+    Constrói o prompt RAG conforme o 'Contrato'.
     """
     return [
         {"role": "system", "content": gen_cfg.default_system_prompt},
@@ -45,7 +45,7 @@ def build_rag_prompt(query: str, context: str) -> list[dict[str, str]]:
 
 def format_context_with_budget(chunks: list, max_chars: int = gen_cfg.max_context_chars) -> str:
     """
-    Formata contexto respeitando o Token Budget via len() (Slide 8 do Bloco 3).
+    Formata contexto respeitando o Token Budget via len().
     """
     parts = []
     current_chars = 0

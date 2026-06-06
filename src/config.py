@@ -114,7 +114,7 @@ class GenerationConfig:
     Configurações para a fase de geração e segurança.
 
     Attributes:
-        max_context_chars: Token budget (Slide 8 do Bloco 3).
+        max_context_chars: Token budget.
         system_prompt: O 'contrato' de instrução para o LLM.
     """
     max_context_chars: int = 4000
